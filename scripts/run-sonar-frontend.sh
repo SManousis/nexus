@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ -z "${SONAR_HOST_URL:-}" || -z "${SONAR_TOKEN:-}" ]]; then
+  echo "Skipping frontend Sonar upload because SONAR_HOST_URL and SONAR_TOKEN are not configured."
+  exit 0
+fi
+
+cd "$(dirname "$0")/../frontend"
+
+npm ci
+npm run build
+# Sonar's coverage condition needs an LCOV report; see sonar.javascript.lcov.reportPaths.
+npm run test:coverage
+npx sonar-scanner \
+  -Dproject.settings=sonar-project.properties \
+  -Dsonar.host.url="${SONAR_HOST_URL}" \
+  -Dsonar.token="${SONAR_TOKEN}" \
+  -Dsonar.qualitygate.wait=true \
+  -Dsonar.qualitygate.timeout=600
