@@ -1,0 +1,27 @@
+services:
+  nexus:
+    image: sonatype/nexus3:latest
+    container_name: nexus
+    ports:
+      - "8082:8081" # UI/API
+      - "8083:8083" # docker-hosted connector
+      - "8084:8084" # docker-proxy connector
+      - "8085:8085" # docker-group connector
+    volumes:
+      - nexus-data:/nexus-data
+    restart: unless-stopped
+    networks:
+      - nexus-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8081/service/rest/v1/status || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 90s
+
+volumes:
+  nexus-data:
+
+networks:
+  nexus-network:
+    driver: bridge

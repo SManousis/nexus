@@ -105,6 +105,78 @@ pipeline {
             }
         }
 
+        // Runs only if 'Build and Test' succeeded: declarative pipelines stop
+        // advancing through `stages` on a prior failure, so this needs no
+        // explicit FORCE_BUILD_FAILURE/FORCE_TEST_FAILURE check of its own.
+        stage('Publish to Nexus') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'nexus-credentials',
+                    usernameVariable: 'NEXUS_USER',
+                    passwordVariable: 'NEXUS_PASS'
+                )]) {
+                    sh '''
+                        set -eu
+
+                        for service in \
+                            api-gateway \
+                            discovery-service \
+                            user-service \
+                            product-service \
+                            media-service \
+                            order-service
+                        do
+                            echo "Publishing ${service} to Nexus"
+                            (
+                                cd product-service
+                                sh ./mvnw -B -ntp \
+                                    -s ../jenkins/nexus-settings.xml \
+                                    -f "../${service}/pom.xml" \
+                                    deploy -DskipTests \
+                                    -DaltReleaseDeploymentRepository=nexus-releases::http://nexus:8081/repository/maven-releases/ \
+                                    -DaltSnapshotDeploymentRepository=nexus-snapshots::http://nexus:8081/repository/maven-snapshots/
+                            )
+                        done
+                    '''
+                }
+            }
+        }
+
+        // NOTE: docker build/push here runs against the *nested* dind daemon
+        // (the `docker` service in jenkins-compose.yaml, reached via
+        // DOCKER_HOST), not the jenkins container's own network - unlike the
+        // Maven stage above, that nested daemon is not yet joined to
+        // nexus-network nor configured with nexus:8083 as an insecure
+        // registry. This stage is correct once that's wired up; until then
+        // expect it to fail to resolve/push. See plan.md Phase 4.
+        stage('Build & Push Docker Images') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'nexus-credentials',
+                    usernameVariable: 'NEXUS_USER',
+                    passwordVariable: 'NEXUS_PASS'
+                )]) {
+                    sh '''
+                        set -eu
+                        echo "$NEXUS_PASS" | docker login nexus:8083 -u "$NEXUS_USER" --password-stdin
+
+                        for service in \
+                            api-gateway \
+                            discovery-service \
+                            user-service \
+                            product-service \
+                            media-service \
+                            order-service
+                        do
+                            TAG="nexus:8083/buy02/${service}:${GIT_COMMIT}"
+                            docker build -t "$TAG" "./${service}"
+                            docker push "$TAG"
+                        done
+                    '''
+                }
+            }
+        }
+
         stage('Deploy to Staging') {
             when {
                 expression {
@@ -142,6 +214,8 @@ Branch: ${env.BRANCH_NAME ?: 'main'}
 Commit: ${env.GIT_COMMIT ?: 'unknown'}
 Environment: ${params.DEPLOY_ENV}
 Deployment skipped: ${params.SKIP_DEPLOY}
+Artifacts published to Nexus: yes (maven-releases/maven-snapshots)
+Docker images published to Nexus: yes (docker-hosted)
 Duration: ${currentBuild.durationString}
 Details: ${env.BUILD_URL}
 """,
@@ -162,6 +236,7 @@ Environment: ${params.DEPLOY_ENV}
 Deployment skipped: ${params.SKIP_DEPLOY}
 Controlled build failure: ${params.FORCE_BUILD_FAILURE}
 Controlled test failure: ${params.FORCE_TEST_FAILURE}
+Artifacts/images published to Nexus: no (pipeline did not reach or did not complete Publish to Nexus / Build & Push Docker Images)
 Rollback: review the Deploy to Staging console output when deployment was attempted.
 Duration: ${currentBuild.durationString}
 Details: ${env.BUILD_URL}

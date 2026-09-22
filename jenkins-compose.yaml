@@ -38,6 +38,9 @@ services:
     volumes:
       - jenkins_home:/var/jenkins_home
       - jenkins-docker-certs:/certs/client:ro
+    networks:
+      - default
+      - nexus
 
 volumes:
   jenkins_home:
@@ -46,3 +49,12 @@ volumes:
     name: mr-jenk_jenkins-docker-certs
   jenkins-docker-data:
     name: mr-jenk_jenkins-docker-data
+
+networks:
+  default: {}
+  # Lets the jenkins controller (where `mvn deploy` steps actually run) reach
+  # Nexus as http://nexus:8081. This is docker-compose.nexus.yml's network -
+  # Nexus must be started first, or this project's `up` will fail to find it.
+  nexus:
+    external: true
+    name: nexus_nexus-network
