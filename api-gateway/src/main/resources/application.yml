@@ -7,33 +7,29 @@ server:
 spring:
   application:
     name: api-gateway
-  reactor:
-    context-propagation: auto
   cloud:
     gateway:
-      server:
-        webflux:
-          routes:
-            - id: user-service-route
-              uri: lb://user-service
-              predicates:
-                - Path=/auth/**,/me,/me/**,/sellers
-            - id: product-service-route
-              uri: lb://product-service
-              predicates:
-                - Path=/products,/products/**
-            - id: media-service-route
-              uri: lb://media-service
-              predicates:
-                - Path=/media/**
-              filters:
-                - name: RequestSize
-                  args:
-                    maxSize: ${GATEWAY_MEDIA_MAX_REQUEST_SIZE:3MB}
-            - id: order-service-route
-              uri: lb://order-service
-              predicates:
-                - Path=/cart,/cart/**,/orders,/orders/**,/wishlist,/wishlist/**
+      routes:
+        - id: user-service-route
+          uri: lb://user-service
+          predicates:
+            - Path=/auth/**,/me,/me/**,/sellers
+        - id: product-service-route
+          uri: lb://product-service
+          predicates:
+            - Path=/products,/products/**
+        - id: media-service-route
+          uri: lb://media-service
+          predicates:
+            - Path=/media/**
+          filters:
+            - name: RequestSize
+              args:
+                maxSize: ${GATEWAY_MEDIA_MAX_REQUEST_SIZE:3MB}
+        - id: order-service-route
+          uri: lb://order-service
+          predicates:
+            - Path=/cart,/cart/**,/orders,/orders/**,/wishlist,/wishlist/**
 
 eureka:
   client:
