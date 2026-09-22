@@ -18,6 +18,8 @@ public class CorrelationIdWebFilter implements WebFilter {
 
     public static final String HEADER_NAME = "X-Correlation-ID";
     public static final String ATTRIBUTE_NAME = CorrelationIdWebFilter.class.getName() + ".correlationId";
+    public static final String CONTEXT_KEY = CorrelationIdWebFilter.class.getName() + ".context";
+    static final String MDC_KEY = "correlationId";
     private static final Pattern SAFE_CORRELATION_ID = Pattern.compile("[A-Za-z0-9._-]{1,128}");
 
     @Override
@@ -35,7 +37,7 @@ public class CorrelationIdWebFilter implements WebFilter {
         });
         // Defer the chain so even synchronous filter code runs with the restored MDC.
         return Mono.defer(() -> chain.filter(tracedExchange))
-                .contextWrite(context -> context.put(CorrelationIdThreadLocalAccessor.CONTEXT_KEY, correlationId));
+                .contextWrite(context -> context.put(CONTEXT_KEY, correlationId));
     }
 
     private String validOrNew(String requestedId) {
