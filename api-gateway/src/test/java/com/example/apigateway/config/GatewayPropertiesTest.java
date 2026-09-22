@@ -79,7 +79,8 @@ class GatewayPropertiesTest {
     }
 
     private static void assertValueContract(Object value, Object equalValue, Object... differentValues) {
-        assertThat(value).isEqualTo(value).isEqualTo(equalValue);
+        assertThat(value.equals(value)).isTrue();
+        assertThat(value).isEqualTo(equalValue);
         assertThat(equalValue).isEqualTo(value).hasSameHashCodeAs(value);
         assertThat(value.equals(null)).isFalse();
         assertThat(value.equals("unrelated type")).isFalse();
