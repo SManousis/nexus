@@ -19,7 +19,6 @@
 .env
 *.env
 !.env.example
-.env.example
 
 # Jenkins local deployment state
 .jenkins-state/

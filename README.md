@@ -250,6 +250,8 @@ The final Phase 6 rerun passed all seven Quality Gates. Earlier new-code coverag
 - [PHASE6_AUDIT_REPORT.md](PHASE6_AUDIT_REPORT.md) — final functional and quality evidence.
 - [instructions.md](instructions.md) — GitHub runner, Jenkins, and repository workflow instructions.
 - [SONAR_QUICKSTART.md](SONAR_QUICKSTART.md) — local SonarQube and self-hosted-runner guide.
+- [NEXUS.md](NEXUS.md) — Nexus Repository Manager setup, Maven/Docker integration, and CI/CD publishing workflow.
+- [plan.md](plan.md) — Nexus exercise phased implementation and audit checklist.
 
 ## Final release procedure
 
