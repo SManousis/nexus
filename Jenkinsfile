@@ -139,7 +139,7 @@ pipeline {
                             echo "Publishing ${service} to Nexus"
                             (
                                 cd product-service
-                                sh ./mvnw -B -ntp \
+                                sh ./mvnw -B -ntp -U \
                                     -s ../jenkins/nexus-settings.xml \
                                     -f "../${service}/pom.xml" \
                                     deploy -DskipTests \
