@@ -9,7 +9,29 @@ services:
     # --insecure-registry lets this *nested* daemon push/pull nexus:8083 over
     # plain HTTP - it's a separate Docker engine from the host, so the host's
     # /etc/docker/daemon.json insecure-registries entry doesn't apply here.
-    command: --storage-driver=overlay2 --insecure-registry=nexus:8083
+    #
+    # DNS (two layers, both needed):
+    # This container's own resolv.conf otherwise inherits the host daemon's
+    # DNS config (systemd-resolved's stub at 172.17.0.1, via
+    # DNSStubListenerExtra) - reachable over ICMP from this network's subnet
+    # (mr-jenk_default, 172.19.0.0/16), but UDP/53 gets refused there (unlike
+    # e.g. nexus_nexus-network, where it works) - a host firewall rule, not a
+    # Docker config issue. Confirmed via `docker pull` inside this container
+    # failing with "server misbehaving" on 127.0.0.11:53, even with the
+    # dockerd --dns flag set below, because that flag only configures DNS for
+    # containers *this nested daemon spawns* - not this container's own
+    # process-level resolution (which dockerd itself uses for registry
+    # pulls). Public DNS is directly reachable from here, so:
+    #   1. `dns:` below fixes this container's own resolv.conf (fixes `docker
+    #      pull`/`docker build`'s own image-pulling, run by the dockerd
+    #      process itself)
+    #   2. `--dns` flags fix resolv.conf for containers *spawned by* the
+    #      nested daemon (e.g. anything a Dockerfile's RUN step needs to
+    #      resolve during the build)
+    command: --storage-driver=overlay2 --insecure-registry=nexus:8083 --dns=1.1.1.1 --dns=8.8.8.8
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
     environment:
       DOCKER_TLS_CERTDIR: /certs
     volumes:
