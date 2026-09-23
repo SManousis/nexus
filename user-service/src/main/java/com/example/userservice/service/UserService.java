@@ -96,7 +96,7 @@ public class UserService {
     public List<SellerSummaryResponse> listSellers() {
         return userRepository.findByRoleOrderByUsernameAsc(UserRole.SELLER).stream()
                 .map(SellerSummaryResponse::from)
-                .toList();
+                .collect(java.util.stream.Collectors.toUnmodifiableList());
     }
 
     @Transactional

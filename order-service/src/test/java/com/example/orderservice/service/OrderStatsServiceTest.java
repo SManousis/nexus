@@ -51,7 +51,7 @@ class OrderStatsServiceTest {
     }
 
     private static List<String> ids(List<ProductStat> stats) {
-        return stats.stream().map(ProductStat::productId).toList();
+        return stats.stream().map(ProductStat::productId).collect(java.util.stream.Collectors.toUnmodifiableList());
     }
 
     @Test void buyerWithNoOrdersGetsZeroTotalsAndEmptyLists() {

@@ -42,7 +42,7 @@ public class ProductEventProducer {
                 Instant.now()
         );
         kafkaTemplate.send(topic, event.productId(), event)
-                .whenComplete((result, ex) -> {
+                .completable().whenComplete((result, ex) -> {
                     if (ex != null) {
                         log.error("Kafka publish failed: topic={} eventType={} productId={} error={}",
                                 topic, eventType, event.productId(), ex.getMessage());

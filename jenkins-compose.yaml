@@ -6,7 +6,10 @@ services:
     container_name: jenkins-docker
     privileged: true
     restart: unless-stopped
-    command: --storage-driver=overlay2
+    # --insecure-registry lets this *nested* daemon push/pull nexus:8083 over
+    # plain HTTP - it's a separate Docker engine from the host, so the host's
+    # /etc/docker/daemon.json insecure-registries entry doesn't apply here.
+    command: --storage-driver=overlay2 --insecure-registry=nexus:8083
     environment:
       DOCKER_TLS_CERTDIR: /certs
     volumes:
@@ -17,6 +20,9 @@ services:
       # Ports published by the nested staging application are exposed here.
       - "8081:8080"
       - "4300:4200"
+    networks:
+      - default
+      - nexus
 
   jenkins:
     build:

@@ -5,7 +5,7 @@ import static org.mockito.Mockito.mock;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
-import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestTemplate;
 
 import com.example.productservice.client.MediaOwnershipClient;
 import com.example.productservice.config.AppProperties;
@@ -24,7 +24,7 @@ class ProductServiceApplicationTests {
                     new AppProperties.KafkaProperties(new AppProperties.KafkaProperties.Topics(
                             "product.created", "product.updated", "product.deleted", "image.deleted")),
                     new AppProperties.MediaProperties("media-service")))
-            .withBean(RestClient.Builder.class, RestClient::builder)
+            .withBean(RestTemplate.class, RestTemplate::new)
             .withBean(ProductRepository.class, () -> mock(ProductRepository.class))
             .withBean(ProductEventProducer.class, () -> mock(ProductEventProducer.class))
             .withUserConfiguration(MediaOwnershipClient.class, ProductService.class);

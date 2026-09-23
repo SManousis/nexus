@@ -30,7 +30,7 @@ import org.slf4j.MDC;
 import com.example.productservice.config.AppProperties;
 import com.example.productservice.config.CorrelationIdFilter;
 
-import jakarta.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 
 @Configuration
@@ -47,10 +47,10 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/products/my").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/products", "/products/**").permitAll()
-                        .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+                        .antMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .antMatchers(HttpMethod.GET, "/products/my").authenticated()
+                        .antMatchers(HttpMethod.GET, "/products", "/products/**").permitAll()
+                        .antMatchers("/actuator/health", "/actuator/info").permitAll()
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2

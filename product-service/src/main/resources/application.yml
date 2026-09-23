@@ -2,11 +2,9 @@ spring:
   application:
     name: product-service
 
-  mongodb:
-    uri: ${MONGODB_URI:mongodb://localhost:27018/productservice}
-
   data:
     mongodb:
+      uri: ${MONGODB_URI:mongodb://localhost:27018/productservice}
       auto-index-creation: true
 
   kafka:

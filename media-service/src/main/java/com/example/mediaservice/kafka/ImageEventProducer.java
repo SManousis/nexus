@@ -35,7 +35,7 @@ public class ImageEventProducer {
 
     private void publish(String topic, ImageEvent event) {
         kafkaTemplate.send(topic, event.mediaId(), event)
-                .whenComplete((result, ex) -> {
+                .completable().whenComplete((result, ex) -> {
                     if (ex != null) {
                         log.error("Kafka publish failed: topic={} eventType={} mediaId={} error={}",
                                 topic, event.eventType(), event.mediaId(), ex.getMessage());

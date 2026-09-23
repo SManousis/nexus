@@ -42,7 +42,7 @@ public class OrderQueryService {
                 contains(order.getId(), term)
                 || contains(order.getBuyerId(), term)
                 || order.getItems().stream().anyMatch(item -> contains(item.name(), term)))
-                .toList();
+                .collect(java.util.stream.Collectors.toUnmodifiableList());
     }
 
     private boolean contains(String value, String term) {

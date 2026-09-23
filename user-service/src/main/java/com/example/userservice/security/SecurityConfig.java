@@ -4,7 +4,7 @@ import com.example.userservice.config.AppProperties;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.OctetSequenceKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
-import jakarta.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -67,10 +67,10 @@ public class SecurityConfig {
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                .requestMatchers(HttpMethod.POST, "/auth/register", "/auth/login").permitAll()
-                .requestMatchers(HttpMethod.GET,  "/actuator/health", "/actuator/info").permitAll()
-                .requestMatchers(HttpMethod.GET, "/sellers").permitAll()
+                .antMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                .antMatchers(HttpMethod.POST, "/auth/register", "/auth/login").permitAll()
+                .antMatchers(HttpMethod.GET,  "/actuator/health", "/actuator/info").permitAll()
+                .antMatchers(HttpMethod.GET, "/sellers").permitAll()
                 .anyRequest().authenticated()
             )
 

@@ -6,44 +6,24 @@ if [[ -z "${SONAR_HOST_URL:-}" || -z "${SONAR_TOKEN:-}" ]]; then
   exit 0
 fi
 
-services=(
-  api-gateway
-  discovery-service
-  media-service
-  order-service
-  product-service
-  user-service
-)
+: "${JAVA11_HOME:?Set JAVA11_HOME to the Java 11 application JDK}"
+: "${JAVA_HOME:?Set JAVA_HOME to the Java 21 scanner JDK}"
 
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$repo_root/product-service"
+
+services=(api-gateway discovery-service media-service order-service product-service user-service)
 for service in "${services[@]}"; do
-  echo "============================================================"
-  echo "Running backend build/test for ${service}"
-  echo "============================================================"
+  echo "Building and testing ${service} with Java 11"
+  JAVA_HOME="$JAVA11_HOME" ./mvnw -B -ntp -f "../${service}/pom.xml" clean verify
 
-  if [[ -d "${service}" ]]; then
-    if [[ -x "${service}/mvnw" ]]; then
-      (cd "${service}" && ./mvnw -q test jacoco:report)
-    else
-      (cd "${service}" && mvn -q test jacoco:report)
-    fi
-
-    if [[ -x "${service}/mvnw" ]]; then
-      (cd "${service}" && ./mvnw -q sonar:sonar \
-        -Dsonar.projectKey="buy-01-${service}" \
-        -Dsonar.projectName="${service}" \
-        -Dsonar.host.url="${SONAR_HOST_URL}" \
-        -Dsonar.token="${SONAR_TOKEN}" \
-        -Dsonar.coverage.jacoco.xmlReportPaths="target/site/jacoco/jacoco.xml")
-    else
-      (cd "${service}" && mvn -q sonar:sonar \
-        -Dsonar.projectKey="buy-01-${service}" \
-        -Dsonar.projectName="${service}" \
-        -Dsonar.host.url="${SONAR_HOST_URL}" \
-        -Dsonar.token="${SONAR_TOKEN}" \
-        -Dsonar.coverage.jacoco.xmlReportPaths="target/site/jacoco/jacoco.xml")
-    fi
-  else
-    echo "Service directory not found: ${service}"
-    exit 1
-  fi
+  echo "Analyzing ${service} with the scanner JDK"
+  ./mvnw -B -ntp -f "../${service}/pom.xml" sonar:sonar \
+    -Dsonar.projectKey="nexus-${service}" \
+    -Dsonar.projectName="nexus-${service}" \
+    -Dsonar.host.url="$SONAR_HOST_URL" \
+    -Dsonar.token="$SONAR_TOKEN" \
+    -Dsonar.java.jdkHome="$JAVA11_HOME" \
+    -Dsonar.coverage.jacoco.xmlReportPaths="target/site/jacoco/jacoco.xml" \
+    -Dsonar.qualitygate.wait=true
 done

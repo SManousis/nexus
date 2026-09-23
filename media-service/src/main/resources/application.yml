@@ -3,11 +3,9 @@ spring:
     name: media-service
 
 
-  mongodb:
-      uri: ${MONGODB_URI:mongodb://localhost:27018/mediaservice}
-
   data:
     mongodb:
+      uri: ${MONGODB_URI:mongodb://localhost:27018/mediaservice}
       auto-index-creation: true
 
   servlet:

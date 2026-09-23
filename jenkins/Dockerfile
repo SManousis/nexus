@@ -1,4 +1,9 @@
+FROM eclipse-temurin:11-jdk AS application-jdk
+
 FROM jenkins/jenkins:2.568.3-lts-jdk21
+
+COPY --from=application-jdk /opt/java/openjdk /opt/java/java11
+ENV JAVA11_HOME=/opt/java/java11
 
 USER root
 

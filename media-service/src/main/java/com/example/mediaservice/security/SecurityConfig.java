@@ -31,7 +31,7 @@ import org.slf4j.MDC;
 import com.example.mediaservice.config.AppProperties;
 import com.example.mediaservice.config.CorrelationIdFilter;
 
-import jakarta.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 
 @Configuration
@@ -49,12 +49,12 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/actuator/health", "/actuator/info").permitAll()
-                .requestMatchers(HttpMethod.GET, "/media/images/*/metadata").hasRole("SELLER")
-                .requestMatchers(HttpMethod.GET, "/media/images/**").permitAll()
-                .requestMatchers(HttpMethod.POST, "/media/images").hasRole("SELLER")
-                .requestMatchers(HttpMethod.DELETE, "/media/images/**").hasRole("SELLER")
+                .antMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                .antMatchers(HttpMethod.GET, "/actuator/health", "/actuator/info").permitAll()
+                .antMatchers(HttpMethod.GET, "/media/images/*/metadata").hasRole("SELLER")
+                .antMatchers(HttpMethod.GET, "/media/images/**").permitAll()
+                .antMatchers(HttpMethod.POST, "/media/images").hasRole("SELLER")
+                .antMatchers(HttpMethod.DELETE, "/media/images/**").hasRole("SELLER")
                 .anyRequest().authenticated()
             )
             .oauth2ResourceServer(oauth2 -> oauth2

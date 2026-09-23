@@ -63,6 +63,8 @@ pipeline {
                     steps {
                         sh '''
                             set -eu
+                            export JAVA_HOME="$JAVA11_HOME"
+                            export PATH="$JAVA_HOME/bin:$PATH"
 
                             for service in \
                                 api-gateway \
@@ -108,7 +110,13 @@ pipeline {
         // Runs only if 'Build and Test' succeeded: declarative pipelines stop
         // advancing through `stages` on a prior failure, so this needs no
         // explicit FORCE_BUILD_FAILURE/FORCE_TEST_FAILURE check of its own.
+        // Restricted to master (Multibranch Pipeline sets env.BRANCH_NAME) so
+        // feature-branch builds test/verify without publishing real
+        // artifacts/images to Nexus on every push.
         stage('Publish to Nexus') {
+            when {
+                branch 'master'
+            }
             steps {
                 withCredentials([usernamePassword(
                     credentialsId: 'nexus-credentials',
@@ -117,6 +125,8 @@ pipeline {
                 )]) {
                     sh '''
                         set -eu
+                        export JAVA_HOME="$JAVA11_HOME"
+                        export PATH="$JAVA_HOME/bin:$PATH"
 
                         for service in \
                             api-gateway \
@@ -142,14 +152,15 @@ pipeline {
             }
         }
 
-        // NOTE: docker build/push here runs against the *nested* dind daemon
-        // (the `docker` service in jenkins-compose.yaml, reached via
-        // DOCKER_HOST), not the jenkins container's own network - unlike the
-        // Maven stage above, that nested daemon is not yet joined to
-        // nexus-network nor configured with nexus:8083 as an insecure
-        // registry. This stage is correct once that's wired up; until then
-        // expect it to fail to resolve/push. See plan.md Phase 4.
+        // docker build/push here runs against the *nested* dind daemon (the
+        // `docker` service in jenkins-compose.yaml, reached via DOCKER_HOST),
+        // now joined to nexus-network with nexus:8083 as an insecure
+        // registry - see plan.md/NEXUS.md Phase 4. Restricted to master, same
+        // reasoning as Publish to Nexus above.
         stage('Build & Push Docker Images') {
+            when {
+                branch 'master'
+            }
             steps {
                 withCredentials([usernamePassword(
                     credentialsId: 'nexus-credentials',
@@ -214,8 +225,8 @@ Branch: ${env.BRANCH_NAME ?: 'main'}
 Commit: ${env.GIT_COMMIT ?: 'unknown'}
 Environment: ${params.DEPLOY_ENV}
 Deployment skipped: ${params.SKIP_DEPLOY}
-Artifacts published to Nexus: yes (maven-releases/maven-snapshots)
-Docker images published to Nexus: yes (docker-hosted)
+Artifacts published to Nexus: ${env.BRANCH_NAME == 'master' ? 'yes (maven-releases/maven-snapshots)' : 'no (Publish to Nexus is master-only; branch was ' + (env.BRANCH_NAME ?: 'unknown') + ')'}
+Docker images published to Nexus: ${env.BRANCH_NAME == 'master' ? 'yes (docker-hosted)' : 'no (Build & Push Docker Images is master-only; branch was ' + (env.BRANCH_NAME ?: 'unknown') + ')'}
 Duration: ${currentBuild.durationString}
 Details: ${env.BUILD_URL}
 """,

@@ -2,11 +2,9 @@ spring:
   application:
     name: user-service
 
-  mongodb:
-    uri: ${MONGODB_URI:mongodb://localhost:27018/userservice}
-
   data:
     mongodb:
+      uri: ${MONGODB_URI:mongodb://localhost:27018/userservice}
       auto-index-creation: true # creates @Indexed unique constraints on startup
 
 server:

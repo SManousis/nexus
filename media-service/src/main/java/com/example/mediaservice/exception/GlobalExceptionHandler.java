@@ -1,6 +1,6 @@
 package com.example.mediaservice.exception;
 
-import jakarta.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
@@ -60,7 +60,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<Map<String, Object>> handleResponseStatus(ResponseStatusException ex) {
-        HttpStatus status = HttpStatus.resolve(ex.getStatusCode().value());
+        HttpStatus status = HttpStatus.resolve(ex.getStatus().value());
         if (status == null) {
             status = HttpStatus.INTERNAL_SERVER_ERROR;
         }
