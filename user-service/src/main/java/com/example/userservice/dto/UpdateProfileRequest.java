@@ -18,7 +18,8 @@ public class UpdateProfileRequest {
     String username;
 
     /** Avatar Media ID set after uploading via Media Service */
-    @Pattern(regexp = ".*\\S.*", message = "Avatar media ID must not be blank")
+    @Size(max = 64, message = "Avatar media ID is too long")
+    @Pattern(regexp = "\\S+", message = "Avatar media ID must not be blank or contain whitespace")
     String avatarMediaId;
 
     Boolean removeAvatar;
