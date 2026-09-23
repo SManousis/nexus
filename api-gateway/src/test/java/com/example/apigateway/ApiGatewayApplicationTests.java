@@ -3,6 +3,7 @@ package com.example.apigateway;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.URI;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
 import java.util.Map;
@@ -42,9 +43,16 @@ class ApiGatewayApplicationTests {
     @Autowired
     private RouteLocator routeLocator;
 
+    // Default WebTestClient responseTimeout is 5s, which can be too tight
+    // under CI load (this host also runs Nexus, SonarQube, and Jenkins' own
+    // nested dind daemon concurrently) - seen as an intermittent
+    // IllegalStateException: Timeout on blocking read for 5000000000
+    // NANOSECONDS on an otherwise-passing test. 20s gives real CI
+    // contention room without masking an actual hang.
     private WebTestClient client() {
         return WebTestClient.bindToServer()
                 .baseUrl("http://localhost:" + port)
+                .responseTimeout(Duration.ofSeconds(20))
                 .build();
     }
 
