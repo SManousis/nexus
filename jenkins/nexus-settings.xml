@@ -2,14 +2,21 @@
 <!--
   Maven settings for building against Nexus (docker-compose.nexus.yml).
 
-  Used both by Jenkins (Publish to Nexus stage) and locally:
+  This file's URLs target http://nexus:8081 - the container-network address -
+  because its primary consumer is Jenkins (Publish to Nexus stage), which runs
+  inside the `jenkins` container, joined to nexus_nexus-network. That only
+  resolves for containers on that network; `nexus:8081` will NOT resolve from
+  your own machine.
+
+  For local/host-machine ad-hoc testing, use the host-published port instead -
+  swap `nexus:8081` for `localhost:8082` in both the mirror URL below and the
+  command line:
     ./mvnw -s jenkins/nexus-settings.xml -f product-service/pom.xml clean deploy \
       -DaltReleaseDeploymentRepository=nexus-releases::http://localhost:8082/repository/maven-releases/ \
       -DaltSnapshotDeploymentRepository=nexus-snapshots::http://localhost:8082/repository/maven-snapshots/
 
   Credentials come from NEXUS_USER/NEXUS_PASS (set in .env, injected as env vars) -
-  never hardcode them here. localhost:8082 is Nexus's published host port, not
-  nexus:8081 - see the "Network reachability" callout in plan.md.
+  never hardcode them here. See the "Network reachability" callout in plan.md.
 -->
 <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -19,7 +26,7 @@
     <mirror>
       <id>nexus-public</id>
       <mirrorOf>*</mirrorOf>
-      <url>http://localhost:8082/repository/maven-public/</url>
+      <url>http://nexus:8081/repository/maven-public/</url>
     </mirror>
   </mirrors>
 
