@@ -17,7 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.ResourceAccessException;
-import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestTemplate;
 
 class MediaOwnershipClientTest {
 
@@ -26,7 +26,7 @@ class MediaOwnershipClientTest {
 
     @BeforeEach
     void setUp() {
-        RestClient.Builder builder = RestClient.builder();
+        RestTemplate builder = new RestTemplate();
         server = MockRestServiceServer.bindTo(builder).build();
         client = new MediaOwnershipClient(builder, properties());
     }

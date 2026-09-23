@@ -1,14 +1,30 @@
 package com.example.userservice.dto;
 
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-public record LoginRequest(
+import lombok.Value;
+import lombok.experimental.Accessors;
 
-        @NotBlank(message = "Email is required")
-        @Email(message = "Email must be valid")
-        String email,
+import javax.validation.constraints.Email;
+import javax.validation.constraints.NotBlank;
 
-        @NotBlank(message = "Password is required")
-        String password
-) {}
+@Value
+@Accessors(fluent = true)
+@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
+public class LoginRequest {
+    @NotBlank(message = "Email is required")
+    @Email(message = "Email must be valid")
+    String email;
+
+    @NotBlank(message = "Password is required")
+    String password;
+
+    @JsonCreator
+    public LoginRequest(
+            @JsonProperty("email") String email, @JsonProperty("password") String password) {
+        this.email = email;
+        this.password = password;
+    }
+}

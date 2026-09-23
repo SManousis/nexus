@@ -14,7 +14,7 @@ import com.example.orderservice.service.OrderQueryService;
 import com.example.orderservice.service.OrderStatsService;
 import com.example.orderservice.service.OrderStatusService;
 import com.example.orderservice.service.ReorderService;
-import jakarta.validation.Valid;
+import javax.validation.Valid;
 import java.util.List;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.access.AccessDeniedException;
@@ -55,7 +55,7 @@ public class OrderController {
     public List<OrderResponse> mine(@AuthenticationPrincipal Jwt jwt,
                                      @RequestParam(required = false) OrderStatus status,
                                      @RequestParam(required = false) String q) {
-        return queryService.listMine(jwt.getSubject(), status, q).stream().map(OrderResponse::from).toList();
+        return queryService.listMine(jwt.getSubject(), status, q).stream().map(OrderResponse::from).collect(java.util.stream.Collectors.toUnmodifiableList());
     }
 
     @GetMapping("/selling")
@@ -63,7 +63,7 @@ public class OrderController {
                                         @RequestParam(required = false) OrderStatus status,
                                         @RequestParam(required = false) String q) {
         ensureSeller(jwt);
-        return queryService.listSelling(jwt.getSubject(), status, q).stream().map(OrderResponse::from).toList();
+        return queryService.listSelling(jwt.getSubject(), status, q).stream().map(OrderResponse::from).collect(java.util.stream.Collectors.toUnmodifiableList());
     }
 
     /** Statistics are always scoped to the JWT subject; there is no way to request another user's figures. */

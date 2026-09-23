@@ -18,14 +18,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.context.annotation.Bean;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.mock.web.MockMultipartFile;
@@ -38,7 +37,7 @@ import com.example.mediaservice.model.MediaAsset;
 import com.example.mediaservice.security.SecurityConfig;
 import com.example.mediaservice.service.MediaService;
 
-@WebMvcTest(MediaController.class)
+@WebMvcTest(value = MediaController.class, properties = "app.jwt.secret=01234567890123456789012345678901")
 @Import({MediaController.class, GlobalExceptionHandler.class, SecurityConfig.class,
         MediaControllerTest.TestProperties.class})
 @ContextConfiguration(classes = MediaControllerTest.TestApplication.class)
@@ -47,7 +46,7 @@ class MediaControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockitoBean
+    @MockBean
     private MediaService mediaService;
 
     @Test
@@ -152,18 +151,8 @@ class MediaControllerTest {
     }
 
     @TestConfiguration(proxyBeanMethods = false)
-    static class TestProperties {
-        @Bean
-        AppProperties appProperties() {
-            return new AppProperties(
-                    new AppProperties.JwtProperties(
-                            "01234567890123456789012345678901", 60_000, "user-service", "buy-01-api"),
-                    new AppProperties.CorsProperties(java.util.List.of("http://localhost:4200")),
-                    new AppProperties.StorageProperties("test-storage", "/media/images"),
-                    new AppProperties.KafkaProperties(new AppProperties.KafkaProperties.Topics(
-                            "image.uploaded", "image.deleted", "product.deleted")));
-        }
-    }
+    @org.springframework.boot.context.properties.EnableConfigurationProperties(AppProperties.class)
+    static class TestProperties {}
 
     @SpringBootConfiguration
     @EnableAutoConfiguration

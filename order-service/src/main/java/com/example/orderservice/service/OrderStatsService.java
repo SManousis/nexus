@@ -62,11 +62,11 @@ public class OrderStatsService {
                 totals.computeIfAbsent(item.productId(), id -> new ProductTotal(item)).add(item);
             }
         }
-        return totals.values().stream().map(ProductTotal::toStat).toList();
+        return totals.values().stream().map(ProductTotal::toStat).collect(java.util.stream.Collectors.toUnmodifiableList());
     }
 
     private static List<ProductStat> top(List<ProductStat> products, Comparator<ProductStat> order) {
-        return products.stream().sorted(order).limit(TOP_LIMIT).toList();
+        return products.stream().sorted(order).limit(TOP_LIMIT).collect(java.util.stream.Collectors.toUnmodifiableList());
     }
 
     private static BigDecimal totalOf(List<Order> orders) {

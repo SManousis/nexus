@@ -9,14 +9,7 @@ class ProductEventCompatibilityTest {
 
     @Test
     void readsLegacyImageUrlsFromQueuedProductEvents() throws Exception {
-        ProductEvent event = new ObjectMapper().readValue("""
-                {
-                  "eventType": "PRODUCT_DELETED",
-                  "productId": "product-1",
-                  "sellerId": "seller-1",
-                  "imageUrls": ["media-1"]
-                }
-                """, ProductEvent.class);
+        ProductEvent event = new ObjectMapper().readValue("{\n  \"eventType\": \"PRODUCT_DELETED\",\n  \"productId\": \"product-1\",\n  \"sellerId\": \"seller-1\",\n  \"imageUrls\": [\"media-1\"]\n}\n", ProductEvent.class);
 
         assertThat(event.imageIds()).containsExactly("media-1");
     }

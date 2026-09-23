@@ -16,7 +16,16 @@ jobs:
         with:
           fetch-depth: 0 # full history: SonarQube needs it for blame/new-code analysis
 
-      - name: Set up JDK 21
+      - name: Set up JDK 11 for application builds
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '11'
+
+      - name: Save application JDK location
+        run: echo "JAVA11_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+
+      - name: Set up JDK 21 for SonarQube
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -49,9 +58,11 @@ jobs:
                   # Only product-service has a committed Maven wrapper; reuse it for
                   # every module, same trick the Jenkinsfile uses.
                   cd product-service
+                  JAVA_HOME="$JAVA11_HOME" ./mvnw -B -ntp \
+                      -f "../${service}/pom.xml" clean verify
                   ./mvnw -B -ntp \
-                      -f "../${service}/pom.xml" \
-                      clean verify sonar:sonar \
+                      -f "../${service}/pom.xml" sonar:sonar \
+                      -Dsonar.java.jdkHome="$JAVA11_HOME" \
                       -Dsonar.host.url="$SONAR_HOST_URL" \
                       -Dsonar.token="$SONAR_TOKEN" \
                       -Dsonar.projectKey="nexus-${service}" \

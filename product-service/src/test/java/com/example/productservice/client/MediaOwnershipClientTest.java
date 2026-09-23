@@ -15,7 +15,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.ResourceAccessException;
-import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestTemplate;
 
 import com.example.productservice.config.AppProperties;
 import com.example.productservice.exception.InvalidMediaReferenceException;
@@ -28,7 +28,7 @@ class MediaOwnershipClientTest {
 
     @BeforeEach
     void setUp() {
-        RestClient.Builder builder = RestClient.builder();
+        RestTemplate builder = new RestTemplate();
         server = MockRestServiceServer.bindTo(builder).build();
         client = new MediaOwnershipClient(builder, properties());
     }
@@ -86,10 +86,10 @@ class MediaOwnershipClientTest {
 
     @Test
     void mapsDiscoveryWithNoServiceInstanceToRetryableException() {
-        RestClient.Builder noInstanceBuilder = RestClient.builder()
-                .requestInterceptor((request, body, execution) -> {
-                    throw new IllegalStateException("No instances available for media-service");
-                });
+        RestTemplate noInstanceBuilder = new RestTemplate();
+        noInstanceBuilder.getInterceptors().add((request, body, execution) -> {
+            throw new IllegalStateException("No instances available for media-service");
+        });
         MediaOwnershipClient noInstanceClient = new MediaOwnershipClient(noInstanceBuilder, properties());
 
         assertThatThrownBy(() -> noInstanceClient.verifyOwnedImage(

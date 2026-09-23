@@ -34,7 +34,7 @@ public class OrderEventProducer {
     private void publish(String topic, String eventType, Order order) {
         OrderEvent event = new OrderEvent(eventType, order.getId(), order.getCheckoutGroupId(),
                 order.getBuyerId(), order.getSellerId(), order.getSubtotal(), order.getStatus(), Instant.now());
-        kafkaTemplate.send(topic, order.getId(), event).whenComplete((result, error) -> {
+        kafkaTemplate.send(topic, order.getId(), event).completable().whenComplete((result, error) -> {
             if (error != null) {
                 log.error("Kafka publish failed: topic={} eventType={} orderId={} error={}",
                         topic, eventType, order.getId(), error.getMessage());

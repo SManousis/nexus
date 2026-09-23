@@ -6,33 +6,35 @@ import com.example.userservice.exception.InvalidAvatarMediaException;
 import com.example.userservice.exception.MediaServiceUnavailableException;
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 
 @Component
 public class MediaOwnershipClient {
 
-    private final RestClient restClient;
+    private final RestTemplate restTemplate;
     private final String mediaServiceBaseUrl;
 
     public MediaOwnershipClient(
-            @Qualifier("loadBalancedRestClientBuilder") RestClient.Builder restClientBuilder,
+            @Qualifier("loadBalancedRestTemplate") RestTemplate restTemplate,
             AppProperties properties) {
-        this.restClient = restClientBuilder.build();
+        this.restTemplate = restTemplate;
         this.mediaServiceBaseUrl = "http://" + properties.media().serviceName();
     }
 
     public void verifyOwnedImage(String userId, String mediaId, String bearerToken) {
         MediaMetadataResponse metadata;
         try {
-            metadata = restClient.get()
-                    .uri(mediaServiceBaseUrl + "/media/images/{id}/metadata", mediaId)
-                    .headers(headers -> headers.setBearerAuth(bearerToken))
-                    .retrieve()
-                    .body(MediaMetadataResponse.class);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(bearerToken);
+            metadata = restTemplate.exchange(mediaServiceBaseUrl + "/media/images/{id}/metadata",
+                    HttpMethod.GET, new HttpEntity<>(headers), MediaMetadataResponse.class, mediaId).getBody();
         } catch (RestClientResponseException exception) {
-            int status = exception.getStatusCode().value();
+            int status = exception.getRawStatusCode();
             if (status == 403 || status == 404) {
                 throw new InvalidAvatarMediaException("Invalid avatar media reference");
             }
@@ -54,13 +56,12 @@ public class MediaOwnershipClient {
 
     public void deleteOwnedImage(String mediaId, String bearerToken) {
         try {
-            restClient.delete()
-                    .uri(mediaServiceBaseUrl + "/media/images/{id}", mediaId)
-                    .headers(headers -> headers.setBearerAuth(bearerToken))
-                    .retrieve()
-                    .toBodilessEntity();
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(bearerToken);
+            restTemplate.exchange(mediaServiceBaseUrl + "/media/images/{id}", HttpMethod.DELETE,
+                    new HttpEntity<>(headers), Void.class, mediaId);
         } catch (RestClientResponseException exception) {
-            if (exception.getStatusCode().value() == 404) {
+            if (exception.getRawStatusCode() == 404) {
                 return;
             }
             throw new MediaServiceUnavailableException(

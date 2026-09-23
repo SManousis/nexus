@@ -8,7 +8,7 @@ This document records how Nexus Repository Manager was set up for this repositor
 
 | Brief says | What this repo actually does | Why |
 |---|---|---|
-| Java 11 | Java 21 (Spring Boot `4.1.0`, Spring Cloud `2025.1.2`) | Spring Boot 3.x+ requires Java 17 minimum; downgrading the existing buy-02 services to 11 would break the project and is out of scope for an artifact-management exercise. |
+| Java 11 | Java 11 (Spring Boot `2.7.18`, Spring Cloud `2021.0.9`) | All six services build and run on Java 11. Jenkins itself and the SonarQube scanner retain Java 21; application builds use a separate Java 11 JDK. See [JAVA11_MIGRATION.md](JAVA11_MIGRATION.md). |
 | "a simple web application... Spring Boot" | The existing buy-02 microservices project (6 services + Angular frontend) | Reused rather than built from scratch. **`product-service`** is the designated flagship service for every grading-relevant demo below — treat it as "the web application" if you're grading against the brief. |
 | WAR or JAR | JAR only | All six services are Spring Boot apps with embedded servers and default (`jar`) packaging; none declare `<packaging>war</packaging>`, and none should — that's the standard Spring Boot deployment model, and the brief explicitly accepts JAR as an alternative to WAR. |
 | (not mentioned) | Nexus **Community Edition** requires accepting a EULA via the REST API before any repository works | `sonatype/nexus3:latest` currently ships as CE, not classic OSS. See §2. |

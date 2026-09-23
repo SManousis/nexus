@@ -63,6 +63,8 @@ pipeline {
                     steps {
                         sh '''
                             set -eu
+                            export JAVA_HOME="$JAVA11_HOME"
+                            export PATH="$JAVA_HOME/bin:$PATH"
 
                             for service in \
                                 api-gateway \
@@ -117,6 +119,8 @@ pipeline {
                 )]) {
                     sh '''
                         set -eu
+                        export JAVA_HOME="$JAVA11_HOME"
+                        export PATH="$JAVA_HOME/bin:$PATH"
 
                         for service in \
                             api-gateway \

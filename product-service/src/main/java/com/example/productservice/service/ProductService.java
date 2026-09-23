@@ -70,7 +70,7 @@ public class ProductService {
     public List<ProductResponse> listProducts() {
         return productRepository.findAll().stream()
                 .map(ProductResponse::from)
-                .toList();
+                .collect(java.util.stream.Collectors.toUnmodifiableList());
     }
 
     public List<ProductResponse> searchProducts(String keyword, BigDecimal minPrice, BigDecimal maxPrice,
@@ -93,7 +93,7 @@ public class ProductService {
         if (sellerId != null && !sellerId.isBlank()) query.addCriteria(Criteria.where("sellerId").is(sellerId.trim()));
         if (Boolean.TRUE.equals(inStock)) query.addCriteria(Criteria.where("stock").gt(0));
         query.with(productSort(sort)).skip((long) page * size).limit(size);
-        return mongoTemplate.find(query, Product.class).stream().map(ProductResponse::from).toList();
+        return mongoTemplate.find(query, Product.class).stream().map(ProductResponse::from).collect(java.util.stream.Collectors.toUnmodifiableList());
     }
 
     private void validateSearch(BigDecimal minPrice, BigDecimal maxPrice, int page, int size) {
@@ -107,18 +107,18 @@ public class ProductService {
     }
 
     private Sort productSort(String value) {
-        return switch (value == null ? "newest" : value) {
-            case "price_asc" -> Sort.by(Sort.Direction.ASC, "price");
-            case "price_desc" -> Sort.by(Sort.Direction.DESC, "price");
-            case "newest" -> Sort.by(Sort.Direction.DESC, "createdAt");
-            default -> throw new IllegalArgumentException("Unsupported product sort: " + value);
-        };
+        switch (value == null ? "newest" : value) {
+            case "price_asc": return Sort.by(Sort.Direction.ASC, "price");
+            case "price_desc": return Sort.by(Sort.Direction.DESC, "price");
+            case "newest": return Sort.by(Sort.Direction.DESC, "createdAt");
+            default: throw new IllegalArgumentException("Unsupported product sort: " + value);
+        }
     }
 
     public List<ProductResponse> listProductsBySeller(String sellerId) {
         return productRepository.findBySellerId(sellerId).stream()
                 .map(ProductResponse::from)
-                .toList();
+                .collect(java.util.stream.Collectors.toUnmodifiableList());
     }
 
     public ProductResponse getProductById(String productId) {
