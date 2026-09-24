@@ -1,6 +1,6 @@
-# Buy-02 Plan — Completing the E-Commerce Platform
+# Nexus Application Plan — Completing the E-Commerce Platform
 
-This document plans the buy-02 work on top of the existing buy-01 codebase (Discovery, Gateway, User, Product, Media services + Angular frontend, documented in [`README.md`](README.md)). It exists to be checked off against, not just read once — each section ends with what "done" looks like, and Section 12 maps every audit question in the brief to the section that answers it.
+This document plans the Nexus application work on top of the existing buy-01 codebase (Discovery, Gateway, User, Product, Media services + Angular frontend, documented in [`README.md`](README.md)). It exists to be checked off against, not just read once — each section ends with what "done" looks like, and Section 12 maps every audit question in the brief to the section that answers it.
 
 Nothing described here as already built has been re-verified in this pass except by reading source; treat "existing" claims the same way the current README treats its own audit status — confirmed by reading code, not by a runtime run.
 
@@ -94,12 +94,12 @@ Read from the current source, not assumed:
 
 - **Services**: `discovery-service` (Eureka, 8761), `api-gateway` (Spring Cloud Gateway, 8080), `user-service` (8081), `product-service` (8082), `media-service` (8083). Each Java service is Spring Boot 3 / Java 21, registers with Eureka, validates the same HS256 JWT (`JWT_SECRET`, `JWT_ISSUER`, `JWT_AUDIENCE`), and exposes `/actuator/health`.
 - **Data**: one Mongo database per service (`userservice`, `productservice`, `mediaservice`) on a shared `mongo:7` container. `User` has `id, username, email, password(bcrypt), role(CLIENT|SELLER), avatarMediaId, version, createdAt, updatedAt`. `Product` has `id, sellerId, name, description, price(BigDecimal), stock, imageIds[], version, createdAt, updatedAt`, with a unique partial index enforcing an image belongs to at most one product. `MediaAsset` has `id, sellerId, originalFileName, storedFileName, contentType, sizeBytes, storageKey, createdAt, updatedAt`.
-- **Cross-service pattern**: services call each other directly by container hostname for synchronous ownership checks (e.g. `product-service` → `MEDIA_SERVICE_BASE_URL` to confirm a seller owns an image), and use Kafka for asynchronous cleanup (`product.deleted` → media deletes images; `image.deleted` → product strips the ID). This split — **synchronous direct call when a request must succeed-or-fail together, Kafka when it's best-effort cleanup** — is the precedent buy-02 should follow rather than inventing a new one.
+- **Cross-service pattern**: services call each other directly by container hostname for synchronous ownership checks (e.g. `product-service` → `MEDIA_SERVICE_BASE_URL` to confirm a seller owns an image), and use Kafka for asynchronous cleanup (`product.deleted` → media deletes images; `image.deleted` → product strips the ID). This split — **synchronous direct call when a request must succeed-or-fail together, Kafka when it's best-effort cleanup** — is the precedent Nexus should follow rather than inventing a new one.
 - **Gateway routing**: one `RouteLocator` entry per service in `api-gateway/src/main/resources/application.yml`, matched by path prefix, resolved via `lb://<service-name>` through Eureka.
 - **Frontend**: standalone-module Angular app (`auth`, `catalog`, `profile`, `seller`, `shared`, `layout`), with `AuthGuard`/`RoleGuard`, an auth token interceptor, and typed services (`auth`, `product`, `media`) under `shared/services`.
 - **Security posture**: BCrypt passwords, JWT-only auth, `403` for wrong role, `404` for cross-owner access (existence-masked), global exception handlers producing a consistent JSON error shape, production HTTPS overlay with HSTS/CSP.
 - **CI/CD**: `Jenkinsfile` builds+tests all 6 Maven modules and the Angular app in parallel, archives artifacts, and deploys to staging behind a flag. `.github/workflows/sonarqube.yml` runs backend+frontend SonarQube analysis on push/PR to `main`, gated as a required status check.
-- **Buy-02 progress**: the `order-service` foundation is merged and the persistent cart API is prepared on `feature-cart-api`. Orders, wishlist, search/filtering, and buyer/seller analytics are not implemented yet. `PLAN.md` is still absent even though the README references it four times.
+- **Nexus progress**: the `order-service` foundation is merged and the persistent cart API is prepared on `feature-cart-api`. Orders, wishlist, search/filtering, and buyer/seller analytics are not implemented yet. `PLAN.md` is still absent even though the README references it four times.
 
 ## 1. New architecture: `order-service`
 
@@ -203,7 +203,7 @@ Profile "best products / most-bought / money spent" and seller "best-selling / m
 
 `Product` gains no new field either — "best-selling products" is `order-service` grouping `orders.items` by `productId` and calling `product-service` for display names, not a `soldCount` counter on `Product` that two services would need to keep in sync.
 
-**Done when**: the three new collections exist with the indexes above, `order-service` boots with `spring.data.mongodb.auto-index-creation: true` (matching the other services), and a migration note is added to this plan's history if any renaming happens later (the same way `README.md` §"Database design" documents the diagram-vs-implementation field mapping for buy-01 — do the same for any buy-02 renames so the audit table stays accurate).
+**Done when**: the three new collections exist with the indexes above, `order-service` boots with `spring.data.mongodb.auto-index-creation: true` (matching the other services), and a migration note is added to this plan's history if any renaming happens later (the same way `README.md` §"Database design" documents the diagram-vs-implementation field mapping for buy-01 — do the same for any Nexus renames so the audit table stays accurate).
 
 ## 3. API design
 
@@ -317,7 +317,7 @@ Apply the same measures already in place for buy-01, extended to the new surface
 ## 7. CI/CD and SonarQube
 
 - Add `order-service` to the Jenkinsfile's backend build loop and to whatever SonarQube scan step/matrix covers `product-service`/`user-service`/`media-service` today (check `.github/workflows/sonarqube.yml` and `scripts/run-sonar-backend.sh` for the loop to extend).
-- Keep the PR-gated flow already documented in `SONAR_QUICKSTART.md`: every buy-02 feature branch goes through a PR into `main`, the `build-and-analyze` required check must pass, one approval required.
+- Keep the PR-gated flow already documented in `SONAR_QUICKSTART.md`: every Nexus feature branch goes through a PR into `main`, the `build-and-analyze` required check must pass, one approval required.
 - As SonarQube flags issues in the new module, fix them in the same PR (or a fast-follow PR) and note the fix the way `SONAR_QUICKSTART.md` §14 already documents a resolved duplicated-literal issue — the audit explicitly asks for *documented* SonarQube-driven improvements, so keep a short running note (in the PR description or a `CHANGES.txt` like `media-service` already has) rather than only fixing silently.
 
 **Done when**: a PR touching `order-service` triggers the same `build-and-analyze` check as the existing services, and it's `required` in branch protection for `main`.
@@ -326,7 +326,7 @@ Apply the same measures already in place for buy-01, extended to the new surface
 
 The brief scores this independently of the code, so make it visible in the repo, not just true in practice:
 
-- One feature branch + one PR per bullet in §9 below — not one giant PR for all of buy-02. Small PRs are what makes "code reviews for each PR" checkable.
+- One feature branch + one PR per bullet in §9 below — not one giant PR for all of Nexus. Small PRs are what makes "code reviews for each PR" checkable.
 - Every PR description states what changed and why, links back to the relevant instruction bullet, and — once merged — is left as the record of review (approval + passing CI) the audit will read.
 - Every PR gets at least one review comment thread resolved before merge, even on a solo project — self-review via a second pass, or ask a peer, to leave an actual reviewed trail rather than an instant self-approve.
 - Keep `main` always deployable: merge only after CI is green, never push directly to `main` (branch protection already requires this per `SONAR_QUICKSTART.md` §7).
@@ -346,7 +346,7 @@ The brief scores this independently of the code, so make it visible in the repo,
 9. Wishlist (bonus), end to end.
 10. Extra payment methods (bonus), end to end.
 11. SonarQube cleanup pass(es) as issues surface from the above.
-12. Docs pass: update `README.md`'s architecture diagram, routing table, DB table, and Kafka table to include `order-service`; restore/author `PLAN.md` with the buy-02 manual runtime scenarios (cart-survives-refresh, multi-seller checkout, status transitions, ownership masking, search/filter, stats accuracy) the same way it currently promises to cover buy-01's scenarios.
+12. Docs pass: update `README.md`'s architecture diagram, routing table, DB table, and Kafka table to include `order-service`; restore/author `PLAN.md` with the Nexus manual runtime scenarios (cart-survives-refresh, multi-seller checkout, status transitions, ownership masking, search/filter, stats accuracy) the same way it currently promises to cover buy-01's scenarios.
 
 ## 10. Testing strategy
 
@@ -383,4 +383,4 @@ The brief scores this independently of the code, so make it visible in the repo,
 
 - **Cart persistence model**: this plan assumes server-side (`order-service`-backed) cart rather than `localStorage`-only, because it's the more convincing answer to "add products, refresh, are they still there" across devices/sessions and because checkout needs a server-side source of truth anyway. Confirm this is acceptable scope before building — a `localStorage`-only cart is faster to build but weaker evidence for the audit.
 - **Multi-seller order splitting**: this plan splits one checkout into one `Order` per seller (§1.1). If graders expect a single Order object with mixed sellers, this is a one-collection reshape, not a rewrite — flag now if that's a hard requirement rather than after §3 is built.
-- **`PLAN.md`**: currently referenced by `README.md` but absent from the repo. Restoring it (PR 12) is included here because the audit questions read like a runtime checklist the way `PLAN.md` is described to be used — confirm whether that's expected to exist for buy-02 or whether this plan document supersedes it.
+- **`PLAN.md`**: currently referenced by `README.md` but absent from the repo. Restoring it (PR 12) is included here because the audit questions read like a runtime checklist the way `PLAN.md` is described to be used — confirm whether that's expected to exist for Nexus or whether this plan document supersedes it.
