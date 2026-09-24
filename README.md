@@ -1,6 +1,6 @@
-# Buy-02 E-Commerce Platform
+# Nexus E-Commerce Platform
 
-Buy-02 is a responsive e-commerce application built with Spring Boot microservices, Angular, MongoDB, Kafka, Eureka, and an API Gateway. It completes the required shopping-cart, cash-on-delivery checkout, order-management, product-search/filtering, and buyer/seller profile-statistics features.
+Nexus is a responsive e-commerce application built with Spring Boot microservices, Angular, MongoDB, Kafka, Eureka, and an API Gateway. It completes the required shopping-cart, cash-on-delivery checkout, order-management, product-search/filtering, and buyer/seller profile-statistics features.
 
 ## Implemented features
 
