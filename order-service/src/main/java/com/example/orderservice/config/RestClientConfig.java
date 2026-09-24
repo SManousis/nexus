@@ -1,18 +1,21 @@
 package com.example.orderservice.config;
 
-import java.time.Duration;
-import org.springframework.boot.http.client.ClientHttpRequestFactoryBuilder;
-import org.springframework.boot.http.client.HttpClientSettings;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.client.RestClient;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
+import org.springframework.web.client.RestTemplate;
 
 @Configuration
 public class RestClientConfig {
+
     @Bean
-    RestClient.Builder restClientBuilder() {
-        HttpClientSettings settings = HttpClientSettings.defaults()
-                .withConnectTimeout(Duration.ofSeconds(2)).withReadTimeout(Duration.ofSeconds(3));
-        return RestClient.builder().requestFactory(ClientHttpRequestFactoryBuilder.detect().build(settings));
+    RestTemplate restTemplate() {
+        return createRestTemplate(new HttpComponentsClientHttpRequestFactory());
+    }
+
+    RestTemplate createRestTemplate(HttpComponentsClientHttpRequestFactory requestFactory) {
+        requestFactory.setConnectTimeout(2_000);
+        requestFactory.setReadTimeout(3_000);
+        return new RestTemplate(requestFactory);
     }
 }

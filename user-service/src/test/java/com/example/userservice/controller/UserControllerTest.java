@@ -72,7 +72,7 @@ class UserControllerTest {
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.message")
                         .value("Validation failed"))
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.details.avatarMediaId")
-                        .value("Avatar media ID must not be blank"));
+                        .value("Avatar media ID must not be blank or contain whitespace"));
 
         verify(userService, never()).updateProfile(any(), any(), any());
     }

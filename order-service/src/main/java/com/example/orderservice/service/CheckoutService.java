@@ -19,6 +19,12 @@ import com.example.orderservice.model.ShippingAddress;
 import com.example.orderservice.model.StatusHistoryEntry;
 import com.example.orderservice.repository.CartRepository;
 import com.example.orderservice.repository.OrderRepository;
+
+import lombok.Value;
+import lombok.experimental.Accessors;
+
+import org.springframework.stereotype.Service;
+
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -27,7 +33,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import org.springframework.stereotype.Service;
 
 @Service
 public class CheckoutService {
@@ -37,9 +42,12 @@ public class CheckoutService {
     private final OrderEventProducer eventProducer;
     private final CartService cartService;
 
-    public CheckoutService(CartRepository cartRepository, OrderRepository orderRepository,
-                           ProductClient productClient, OrderEventProducer eventProducer,
-                           CartService cartService) {
+    public CheckoutService(
+            CartRepository cartRepository,
+            OrderRepository orderRepository,
+            ProductClient productClient,
+            OrderEventProducer eventProducer,
+            CartService cartService) {
         this.cartRepository = cartRepository;
         this.orderRepository = orderRepository;
         this.productClient = productClient;
@@ -51,11 +59,12 @@ public class CheckoutService {
         Cart cart = cartRepository.findByUserId(buyerId).orElseThrow(EmptyCartException::new);
         if (cart.getItems().isEmpty()) throw new EmptyCartException();
 
-        Map<String, ProductSnapshot> products = cart.getItems().stream()
-                .map(CartItem::productId)
-                .distinct()
-                .map(id -> productClient.getProduct(id, bearerToken))
-                .collect(Collectors.toMap(ProductSnapshot::id, Function.identity()));
+        Map<String, ProductSnapshot> products =
+                cart.getItems().stream()
+                        .map(CartItem::productId)
+                        .distinct()
+                        .map(id -> productClient.getProduct(id, bearerToken))
+                        .collect(Collectors.toMap(ProductSnapshot::id, Function.identity()));
 
         List<Reservation> reservations = new ArrayList<>();
         try {
@@ -65,7 +74,8 @@ public class CheckoutService {
                     throw new OrderConflictException("Product seller changed: " + product.name());
                 }
                 if (product.stock() == null || product.stock() < item.quantity()) {
-                    throw new OrderConflictException("Insufficient stock for product: " + product.name());
+                    throw new OrderConflictException(
+                            "Insufficient stock for product: " + product.name());
                 }
                 reservations.add(new Reservation(item.productId(), item.quantity()));
                 productClient.adjustStock(item.productId(), -item.quantity(), bearerToken);
@@ -73,35 +83,71 @@ public class CheckoutService {
 
             String groupId = UUID.randomUUID().toString();
             ShippingAddress address = toAddress(request.shippingAddress());
-            List<Order> orders = cart.getItems().stream()
-                    .collect(Collectors.groupingBy(CartItem::sellerId, java.util.LinkedHashMap::new, Collectors.toList()))
-                    .entrySet().stream()
-                    .map(entry -> createOrder(buyerId, groupId, entry.getKey(), entry.getValue(), products,
-                            address, request))
-                    .map(orderRepository::save)
-                    .toList();
+            List<Order> orders =
+                    cart.getItems().stream()
+                            .collect(
+                                    Collectors.groupingBy(
+                                            CartItem::sellerId,
+                                            java.util.LinkedHashMap::new,
+                                            Collectors.toList()))
+                            .entrySet()
+                            .stream()
+                            .map(
+                                    entry ->
+                                            createOrder(
+                                                    buyerId,
+                                                    groupId,
+                                                    entry.getKey(),
+                                                    entry.getValue(),
+                                                    products,
+                                                    address,
+                                                    request))
+                            .map(orderRepository::save)
+                            .collect(java.util.stream.Collectors.toUnmodifiableList());
 
             cartService.clear(buyerId);
             orders.forEach(eventProducer::publishCreated);
-            return new CheckoutResponse(groupId, orders.stream().map(OrderResponse::from).toList());
+            return new CheckoutResponse(
+                    groupId,
+                    orders.stream()
+                            .map(OrderResponse::from)
+                            .collect(java.util.stream.Collectors.toUnmodifiableList()));
         } catch (RuntimeException failure) {
             restoreReservations(reservations, bearerToken);
             throw failure;
         }
     }
 
-    private Order createOrder(String buyerId, String groupId, String sellerId, List<CartItem> items,
-                              Map<String, ProductSnapshot> products, ShippingAddress address,
-                              CheckoutRequest request) {
-        List<OrderItem> snapshots = items.stream().map(item -> {
-            ProductSnapshot product = products.get(item.productId());
-            String imageId = product.imageIds() == null || product.imageIds().isEmpty()
-                    ? null : product.imageIds().get(0);
-            return new OrderItem(product.id(), product.name(), product.price(), item.quantity(), imageId);
-        }).toList();
-        BigDecimal subtotal = snapshots.stream()
-                .map(item -> item.unitPrice().multiply(BigDecimal.valueOf(item.quantity())))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    private Order createOrder(
+            String buyerId,
+            String groupId,
+            String sellerId,
+            List<CartItem> items,
+            Map<String, ProductSnapshot> products,
+            ShippingAddress address,
+            CheckoutRequest request) {
+        List<OrderItem> snapshots =
+                items.stream()
+                        .map(
+                                item -> {
+                                    ProductSnapshot product = products.get(item.productId());
+                                    String imageId =
+                                            product.imageIds() == null
+                                                            || product.imageIds().isEmpty()
+                                                    ? null
+                                                    : product.imageIds().get(0);
+                                    return new OrderItem(
+                                            product.id(),
+                                            product.name(),
+                                            product.price(),
+                                            item.quantity(),
+                                            imageId);
+                                })
+                        .collect(java.util.stream.Collectors.toUnmodifiableList());
+        BigDecimal subtotal =
+                snapshots.stream()
+                        .map(item -> item.unitPrice().multiply(BigDecimal.valueOf(item.quantity())))
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
         Instant now = Instant.now();
         Order order = new Order();
         order.setBuyerId(buyerId);
@@ -125,9 +171,22 @@ public class CheckoutService {
     }
 
     private ShippingAddress toAddress(ShippingAddressRequest request) {
-        return new ShippingAddress(request.line1().trim(), request.city().trim(),
-                request.postalCode().trim(), request.country().trim());
+        return new ShippingAddress(
+                request.line1().trim(),
+                request.city().trim(),
+                request.postalCode().trim(),
+                request.country().trim());
     }
 
-    private record Reservation(String productId, int quantity) {}
+    @Value
+    @Accessors(fluent = true)
+    private static class Reservation {
+        String productId;
+        int quantity;
+
+        public Reservation(String productId, int quantity) {
+            this.productId = productId;
+            this.quantity = quantity;
+        }
+    }
 }

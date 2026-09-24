@@ -5,7 +5,7 @@ import com.example.productservice.dto.ProductResponse;
 import com.example.productservice.dto.UpdateProductRequest;
 import com.example.productservice.dto.StockAdjustmentRequest;
 import com.example.productservice.service.ProductService;
-import jakarta.validation.Valid;
+import javax.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;

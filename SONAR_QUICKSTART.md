@@ -104,3 +104,15 @@ If the check is not initially listed, run the workflow through the first PR and 
 - Confirm approval and the successful check are required before merge.
 
 The runner connects outward to GitHub and reaches SonarQube locally, so no public tunnel is needed.
+
+## Java 11 application builds
+
+The six backend applications use Java 11. SonarScanner still runs on Java 21.
+Set `JAVA11_HOME` to a Java 11 JDK and `JAVA_HOME` to a Java 21 JDK before
+running `scripts/run-sonar-backend.sh`. The script builds/tests on Java 11,
+then scans the existing classes on Java 21 with `sonar.java.jdkHome` pointing
+to Java 11. It uses the same `nexus-*` project keys and quality-gate waiting
+as GitHub Actions. GitHub Actions installs both JDKs automatically.
+
+See [JAVA11_MIGRATION.md](JAVA11_MIGRATION.md) for the Jenkins rebuild and local
+verification instructions.

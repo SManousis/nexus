@@ -42,11 +42,12 @@ Only the Gateway is used by the browser for backend requests. Service-to-service
 | MongoDB | `mongodb://localhost:27018` | Development database |
 | Kafka | `localhost:9092` | Domain-event broker |
 | SonarQube | `http://localhost:9000` | Local code-quality server (separate Compose file) |
+| Nexus | `http://localhost:8082` | Artifact repository — Maven UI/API; Docker connectors on `8083`-`8085` (separate Compose file, see [NEXUS.md](NEXUS.md)) |
 
 ## Prerequisites
 
 - Docker Desktop with Docker Compose.
-- For running outside Docker: Java 21, Maven, Node.js 22, and npm.
+- For running outside Docker: Java 11, Maven 3.9.x, Node.js 22, and npm. See [Java 11 migration](JAVA11_MIGRATION.md) for the separate CI/scanner JDKs, verification commands, and Jenkins image rebuild instructions.
 - A non-empty `JWT_SECRET` of at least 32 characters.
 
 Do not commit `.env`, tokens, passwords, or SonarQube credentials.

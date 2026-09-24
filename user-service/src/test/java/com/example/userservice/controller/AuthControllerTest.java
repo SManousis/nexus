@@ -38,9 +38,7 @@ class AuthControllerTest {
 
         mockMvc.perform(post("/auth/register")
                 .contentType("application/json")
-                .content("""
-                        {"username":"alice","email":"alice@example.com","password":"password123","role":"SELLER"}
-                        """))
+                .content("{\"username\":\"alice\",\"email\":\"alice@example.com\",\"password\":\"password123\",\"role\":\"SELLER\"}\n"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.token").value("jwt-token"))
                 .andExpect(jsonPath("$.userId").value("seller-1"))
@@ -53,9 +51,7 @@ class AuthControllerTest {
     void registerRejectsAnInvalidRequestBeforeCallingTheService() throws Exception {
         mockMvc.perform(post("/auth/register")
                 .contentType("application/json")
-                .content("""
-                        {"username":"ab","email":"invalid-email","password":"short","role":null}
-                        """))
+                .content("{\"username\":\"ab\",\"email\":\"invalid-email\",\"password\":\"short\",\"role\":null}\n"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Validation failed"))
                 .andExpect(jsonPath("$.details.username").value("Username must be 3–50 characters"))
@@ -72,9 +68,7 @@ class AuthControllerTest {
 
         mockMvc.perform(post("/auth/register")
                 .contentType("application/json")
-                .content("""
-                        {"username":"alice","email":"alice@example.com","password":"password123","role":"CLIENT"}
-                        """))
+                .content("{\"username\":\"alice\",\"email\":\"alice@example.com\",\"password\":\"password123\",\"role\":\"CLIENT\"}\n"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value("Email already in use"));
     }
@@ -83,9 +77,7 @@ class AuthControllerTest {
     void loginRejectsInvalidInputBeforeCallingTheService() throws Exception {
         mockMvc.perform(post("/auth/login")
                 .contentType("application/json")
-                .content("""
-                        {"email":"invalid-email","password":""}
-                        """))
+                .content("{\"email\":\"invalid-email\",\"password\":\"\"}\n"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Validation failed"))
                 .andExpect(jsonPath("$.details.email").value("Email must be valid"))
@@ -100,9 +92,7 @@ class AuthControllerTest {
 
         mockMvc.perform(post("/auth/login")
                 .contentType("application/json")
-                .content("""
-                        {"email":"alice@example.com","password":"wrong-password"}
-                        """))
+                .content("{\"email\":\"alice@example.com\",\"password\":\"wrong-password\"}\n"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.message").value("Invalid email or password"));
     }

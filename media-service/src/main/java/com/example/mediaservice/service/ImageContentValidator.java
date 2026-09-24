@@ -216,8 +216,8 @@ public class ImageContentValidator {
                 reader.dispose();
             }
         } catch (IOException | RuntimeException exception) {
-            if (exception instanceof IllegalArgumentException illegalArgumentException) {
-                throw illegalArgumentException;
+            if (exception instanceof IllegalArgumentException) {
+                throw (IllegalArgumentException) exception;
             }
             throw invalidImage(exception);
         }

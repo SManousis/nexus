@@ -4,6 +4,10 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
 
+if [[ -n "${JAVA11_HOME:-}" ]]; then
+  export JAVA_HOME="$JAVA11_HOME"
+fi
+
 if [[ -z "${JAVA_HOME:-}" ]] && command -v java >/dev/null 2>&1; then
   detected_java_home="$(java -XshowSettings:properties -version 2>&1 \
     | awk -F ' = ' '/^[[:space:]]*java.home = / { print $2; exit }')"
@@ -14,6 +18,11 @@ if [[ -z "${JAVA_HOME:-}" ]] && command -v java >/dev/null 2>&1; then
       export JAVA_HOME="$detected_java_home"
     fi
   fi
+fi
+
+if [[ ! -x "${JAVA_HOME:-}/bin/java" ]] || ! "$JAVA_HOME/bin/java" -version 2>&1 | grep -q 'version "11\.'; then
+  echo "Set JAVA11_HOME (or JAVA_HOME) to a Java 11 JDK before verification." >&2
+  exit 1
 fi
 
 run_maven_tests() {

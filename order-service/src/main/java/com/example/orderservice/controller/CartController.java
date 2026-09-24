@@ -4,7 +4,7 @@ import com.example.orderservice.dto.AddCartItemRequest;
 import com.example.orderservice.dto.CartResponse;
 import com.example.orderservice.dto.UpdateCartItemRequest;
 import com.example.orderservice.service.CartService;
-import jakarta.validation.Valid;
+import javax.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;

@@ -7,14 +7,19 @@ import com.example.orderservice.exception.NotFoundException;
 import com.example.orderservice.exception.ProductServiceUnavailableException;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.web.client.RestClientException;
 
 @Component
 public class ProductClient {
-    private final RestClient client;
-    public ProductClient(RestClient.Builder builder, AppProperties properties) {
-        this.client = builder.baseUrl(properties.product().baseUrl()).build();
+    private final RestTemplate client;
+    private final String baseUrl;
+    public ProductClient(RestTemplate restTemplate, AppProperties properties) {
+        this.client = restTemplate;
+        this.baseUrl = properties.product().baseUrl();
     }
     public ProductSnapshot getProduct(String productId) {
         return getProduct(productId, null);
@@ -22,9 +27,10 @@ public class ProductClient {
 
     public ProductSnapshot getProduct(String productId, String bearerToken) {
         try {
-            var request = client.get().uri("/products/{id}", productId);
-            if (bearerToken != null) request.header("Authorization", bearerToken);
-            ProductSnapshot product = request.retrieve().body(ProductSnapshot.class);
+            HttpHeaders headers = new HttpHeaders();
+            if (bearerToken != null) headers.set(HttpHeaders.AUTHORIZATION, bearerToken);
+            ProductSnapshot product = client.exchange(baseUrl + "/products/{id}", HttpMethod.GET,
+                    new HttpEntity<>(headers), ProductSnapshot.class, productId).getBody();
             if (product == null) throw new ProductServiceUnavailableException();
             return product;
         } catch (HttpClientErrorException.NotFound ex) {
@@ -36,12 +42,11 @@ public class ProductClient {
 
     public ProductSnapshot adjustStock(String productId, int delta, String bearerToken) {
         try {
-            ProductSnapshot product = client.patch()
-                    .uri("/products/{id}/stock", productId)
-                    .header("Authorization", bearerToken)
-                    .body(new StockAdjustmentRequest(delta))
-                    .retrieve()
-                    .body(ProductSnapshot.class);
+            HttpHeaders headers = new HttpHeaders();
+            headers.set(HttpHeaders.AUTHORIZATION, bearerToken);
+            ProductSnapshot product = client.exchange(baseUrl + "/products/{id}/stock", HttpMethod.PATCH,
+                    new HttpEntity<>(new StockAdjustmentRequest(delta), headers),
+                    ProductSnapshot.class, productId).getBody();
             if (product == null) throw new ProductServiceUnavailableException();
             return product;
         } catch (HttpClientErrorException.Conflict ex) {

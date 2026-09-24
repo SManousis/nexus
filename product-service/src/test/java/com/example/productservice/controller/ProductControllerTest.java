@@ -28,15 +28,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.context.annotation.Bean;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.example.productservice.config.AppProperties;
@@ -47,7 +46,7 @@ import com.example.productservice.exception.MediaServiceUnavailableException;
 import com.example.productservice.security.SecurityConfig;
 import com.example.productservice.service.ProductService;
 
-@WebMvcTest(ProductController.class)
+@WebMvcTest(value = ProductController.class, properties = "app.jwt.secret=01234567890123456789012345678901")
 @Import({ProductController.class, GlobalExceptionHandler.class, SecurityConfig.class,
         ProductControllerTest.TestProperties.class})
 @ContextConfiguration(classes = ProductControllerTest.TestApplication.class)
@@ -56,10 +55,10 @@ class ProductControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockitoBean
+    @MockBean
     private ProductService productService;
 
-    @MockitoBean
+    @MockBean
     private JwtDecoder jwtDecoder;
 
     @BeforeEach
@@ -133,15 +132,7 @@ class ProductControllerTest {
         mockMvc.perform(post("/products")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer seller-token")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "name": "Name",
-                                  "description": "Description",
-                                  "price": 10.00,
-                                  "stock": 1,
-                                  "imageUrls": ["media-legacy"]
-                                }
-                                """))
+                        .content("{\n  \"name\": \"Name\",\n  \"description\": \"Description\",\n  \"price\": 10.00,\n  \"stock\": 1,\n  \"imageUrls\": [\"media-legacy\"]\n}\n"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.imageIds[0]").value("media-legacy"))
                 .andExpect(jsonPath("$.imageUrls").doesNotExist());
@@ -162,14 +153,7 @@ class ProductControllerTest {
         mockMvc.perform(post("/products")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer client-token")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "name": "Name",
-                                  "description": "Description",
-                                  "price": 10.00,
-                                  "stock": 1
-                                }
-                                """))
+                        .content("{\n  \"name\": \"Name\",\n  \"description\": \"Description\",\n  \"price\": 10.00,\n  \"stock\": 1\n}\n"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.status").value(403))
                 .andExpect(jsonPath("$.message").value("Access denied"));
@@ -203,64 +187,28 @@ class ProductControllerTest {
 
     private static Stream<Arguments> invalidCreateProductRequests() {
         return Stream.of(
-                Arguments.of("blank required name", """
-                        {"name": "", "description": "Description", "price": 10.00, "stock": 1}
-                        """),
-                Arguments.of("oversized required description", """
-                        {"name": "Name", "description": "%s", "price": 10.00, "stock": 1}
-                        """.formatted("d".repeat(2001))),
-                Arguments.of("missing required price", """
-                        {"name": "Name", "description": "Description", "stock": 1}
-                        """),
-                Arguments.of("non-positive price", """
-                        {"name": "Name", "description": "Description", "price": 0, "stock": 1}
-                        """),
-                Arguments.of("negative stock", """
-                        {"name": "Name", "description": "Description", "price": 10.00, "stock": -1}
-                        """));
+                Arguments.of("blank required name", "{\"name\": \"\", \"description\": \"Description\", \"price\": 10.00, \"stock\": 1}\n"),
+                Arguments.of("oversized required description", String.format("{\"name\": \"Name\", \"description\": \"%s\", \"price\": 10.00, \"stock\": 1}\n", "d".repeat(2001))),
+                Arguments.of("missing required price", "{\"name\": \"Name\", \"description\": \"Description\", \"stock\": 1}\n"),
+                Arguments.of("non-positive price", "{\"name\": \"Name\", \"description\": \"Description\", \"price\": 0, \"stock\": 1}\n"),
+                Arguments.of("negative stock", "{\"name\": \"Name\", \"description\": \"Description\", \"price\": 10.00, \"stock\": -1}\n"));
     }
 
     private static Stream<Arguments> invalidUpdateProductRequests() {
         return Stream.of(
-                Arguments.of("empty optional name", """
-                        {"name": ""}
-                        """),
-                Arguments.of("whitespace-only optional name", """
-                        {"name": "   "}
-                        """),
-                Arguments.of("unicode whitespace-only optional name", """
-                        {"name": "\u2003"}
-                        """),
-                Arguments.of("whitespace-only optional description", """
-                        {"description": "   "}
-                        """),
-                Arguments.of("unicode whitespace-only optional description", """
-                        {"description": "\u2003"}
-                        """),
-                Arguments.of("oversized optional description", """
-                        {"description": "%s"}
-                        """.formatted("d".repeat(2001))),
-                Arguments.of("non-positive price", """
-                        {"price": 0}
-                        """),
-                Arguments.of("negative stock", """
-                        {"stock": -1}
-                        """));
+                Arguments.of("empty optional name", "{\"name\": \"\"}\n"),
+                Arguments.of("whitespace-only optional name", "{\"name\": \"   \"}\n"),
+                Arguments.of("unicode whitespace-only optional name", "{\"name\": \"\\u2003\"}\n"),
+                Arguments.of("whitespace-only optional description", "{\"description\": \"   \"}\n"),
+                Arguments.of("unicode whitespace-only optional description", "{\"description\": \"\\u2003\"}\n"),
+                Arguments.of("oversized optional description", String.format("{\"description\": \"%s\"}\n", "d".repeat(2001))),
+                Arguments.of("non-positive price", "{\"price\": 0}\n"),
+                Arguments.of("negative stock", "{\"stock\": -1}\n"));
     }
 
     @TestConfiguration(proxyBeanMethods = false)
-    static class TestProperties {
-        @Bean
-        AppProperties appProperties() {
-            return new AppProperties(
-                    new AppProperties.JwtProperties(
-                            "01234567890123456789012345678901", 60_000, "user-service", "buy-01-api"),
-                    new AppProperties.CorsProperties(java.util.List.of("http://localhost:4200")),
-                    new AppProperties.KafkaProperties(new AppProperties.KafkaProperties.Topics(
-                            "product.created", "product.updated", "product.deleted", "image.deleted")),
-                    new AppProperties.MediaProperties("media-service"));
-        }
-    }
+    @org.springframework.boot.context.properties.EnableConfigurationProperties(AppProperties.class)
+    static class TestProperties {}
 
     @SpringBootConfiguration
     @EnableAutoConfiguration

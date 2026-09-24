@@ -8,7 +8,7 @@ This document records how Nexus Repository Manager was set up for this repositor
 
 | Brief says | What this repo actually does | Why |
 |---|---|---|
-| Java 11 | Java 21 (Spring Boot `4.1.0`, Spring Cloud `2025.1.2`) | Spring Boot 3.x+ requires Java 17 minimum; downgrading the existing buy-02 services to 11 would break the project and is out of scope for an artifact-management exercise. |
+| Java 11 | Java 11 (Spring Boot `2.7.18`, Spring Cloud `2021.0.9`) | All six services build and run on Java 11. Jenkins itself and the SonarQube scanner retain Java 21; application builds use a separate Java 11 JDK. See [JAVA11_MIGRATION.md](JAVA11_MIGRATION.md). |
 | "a simple web application... Spring Boot" | The existing buy-02 microservices project (6 services + Angular frontend) | Reused rather than built from scratch. **`product-service`** is the designated flagship service for every grading-relevant demo below — treat it as "the web application" if you're grading against the brief. |
 | WAR or JAR | JAR only | All six services are Spring Boot apps with embedded servers and default (`jar`) packaging; none declare `<packaging>war</packaging>`, and none should — that's the standard Spring Boot deployment model, and the brief explicitly accepts JAR as an alternative to WAR. |
 | (not mentioned) | Nexus **Community Edition** requires accepting a EULA via the REST API before any repository works | `sonatype/nexus3:latest` currently ships as CE, not classic OSS. See §2. |
@@ -234,11 +234,108 @@ $ docker exec jenkins curl -s -o /dev/null -w "%{http_code}" http://nexus:8081/s
 
 ### 6.2 Known gap: Docker push from Jenkins isn't wired yet
 
-`docker build`/`push` steps in the Jenkinsfile run against Jenkins' **nested Docker-in-Docker daemon** (the `docker` service in `jenkins-compose.yaml`, reached via `DOCKER_HOST=tcp://docker:2376`) — a completely separate Docker engine from both the host and the `jenkins` container. It is not joined to `nexus_nexus-network` and has no `insecure-registries` entry for `nexus:8083`, so `Build & Push Docker Images` will fail to resolve/push as-is. Closing this requires the same treatment §6.1 got — network join + insecure-registry config — but applied to that nested daemon, which also hosts the pipeline's staging deployment (`scripts/deploy-staging.sh`). That's a larger blast radius than recreating the `jenkins` container alone, so it was deliberately left for a follow-up rather than done opportunistically.
+`docker build`/`push` steps in the Jenkinsfile run against Jenkins' **nested Docker-in-Docker daemon** (the `docker` service in `jenkins-compose.yaml`, reached via `DOCKER_HOST=tcp://docker:2376`) — a completely separate Docker engine from both the host and the `jenkins` container. It is not joined to `nexus_nexus-network` and has no `insecure-registries` entry for `nexus:8083`, so `Build & Push Docker Images` will fail to resolve/push as-is. Closing this requires the same treatment §6.1 got — network join + insecure-registry config — but applied to that nested daemon, which also hosts the pipeline's staging deployment (`scripts/deploy-staging.sh`). That's a larger blast radius than recreating the `jenkins` container alone, so it was deliberately left for a follow-up rather than done opportunistically. Fix steps are in §6.4.
 
 ### 6.3 Manual step required: `nexus-credentials` Jenkins credential
 
-Add a "Username with password" credential with ID `nexus-credentials` (Jenkins → Manage Jenkins → Credentials), username `ci-deploy`, password from `.env`'s `NEXUS_PASS`. This mirrors the existing `buy01-jwt-secret` credential already used elsewhere in the `Jenkinsfile`.
+Add a "Username with password" credential with ID `nexus-credentials` (Jenkins → Manage Jenkins → Credentials), username `ci-deploy`, password from `.env`'s `NEXUS_PASS`. This mirrors the existing `buy01-jwt-secret` credential already used elsewhere in the `Jenkinsfile`. Full steps are in §6.4.
+
+### 6.4 Closing the remaining gaps — manual steps
+
+These three are independent of each other and can be done in any order, but this is the order that makes the most sense (rebuild first, since it also recreates the `jenkins` container, then wire credentials/registry on top of the fresh container).
+
+#### Step 1 — Rebuild the Jenkins image (picks up the Java 11 application JDK)
+
+`jenkins/Dockerfile` now bakes a Java 11 JDK into the Jenkins image (`/opt/java/java11`, exposed as `JAVA11_HOME`) so the `Jenkinsfile`'s backend build/test/publish steps can run under Java 11 while the Jenkins controller itself stays on Java 21 (per [`JAVA11_MIGRATION.md`](JAVA11_MIGRATION.md)). The running Jenkins container predates this — rebuild it:
+
+```bash
+docker compose -f jenkins-compose.yaml build jenkins
+docker compose -f jenkins-compose.yaml up -d --no-deps jenkins
+```
+
+`--no-deps` keeps this scoped to just the `jenkins` container — it won't touch `jenkins-docker` (the dind sidecar) or anything outside this compose project. `jenkins_home` is a named volume, so nothing stored there (jobs, credentials, build history) is lost by rebuilding the image.
+
+Verify the JDK landed:
+
+```bash
+docker exec jenkins /opt/java/java11/bin/java -version
+# openjdk version "11...."
+```
+
+#### Step 2 — Create the `nexus-credentials` Jenkins credential
+
+1. Open Jenkins at `http://localhost:8090` and log in.
+2. **Manage Jenkins → Credentials → System → Global credentials (unrestricted) → Add Credentials.**
+3. Kind: **Username with password**.
+4. Username: `ci-deploy`
+5. Password: the value of `NEXUS_PASS` in this repo's `.env` (the `nx-ci-deployer` service account created in Phase 5 — not the Nexus `admin` account).
+6. ID: `nexus-credentials` (must match exactly — this is the literal string the `Jenkinsfile`'s `withCredentials([usernamePassword(credentialsId: 'nexus-credentials', ...)])` blocks reference).
+7. Description: something like "Nexus ci-deploy service account (nx-ci-deployer role)".
+8. Save.
+
+No restart needed — Jenkins picks up new credentials immediately; the next pipeline run that reaches the `Publish to Nexus` stage will use it.
+
+#### Step 3 — Wire the nested dind daemon for Docker push
+
+The `docker` service in `jenkins-compose.yaml` (container `jenkins-docker`) is what actually executes `docker build`/`docker push` for the `Build & Push Docker Images` stage. It needs the same two things `jenkins` itself already got in §6.1: network access to Nexus, and permission to push to a plain-HTTP registry.
+
+1. **Join it to Nexus's network.** Edit `jenkins-compose.yaml`, add the `docker` service to the same external `nexus` network already declared for `jenkins`:
+   ```yaml
+   services:
+     docker:
+       # ...unchanged...
+       networks: [default, nexus]
+   ```
+   (The top-level `networks: { default: {}, nexus: { external: true, name: nexus_nexus-network } }` block already exists from §6.1 — no changes needed there.)
+
+2. **Recreate just that container:**
+   ```bash
+   docker compose -f jenkins-compose.yaml up -d docker
+   ```
+   This restarts `jenkins-docker` — anything it had running (the staging deployment from `scripts/deploy-staging.sh`) goes down with it and needs to be redeployed afterward via the pipeline's `Deploy to Staging` stage.
+
+3. **Configure `nexus:8083` as an insecure registry on the *nested* daemon.** This is a separate Docker engine from the host, with its own config — the host's `/etc/docker/daemon.json` (already updated for `localhost:8083`, see §5) doesn't apply here. The dind image (`docker:28.4.0-dind`) reads `insecure-registries` from its own `/etc/docker/daemon.json` inside that container. Since `jenkins-docker` uses named volumes for `/var/lib/docker` and certs but not for `/etc/docker`, the cleanest way to set this permanently is via the dind container's startup command in `jenkins-compose.yaml`:
+   ```yaml
+   services:
+     docker:
+       command: --storage-driver=overlay2 --insecure-registry=nexus:8083
+   ```
+   Then recreate it again:
+   ```bash
+   docker compose -f jenkins-compose.yaml up -d docker
+   ```
+
+4. **Verify** from inside the `jenkins` container (which talks to this daemon via `DOCKER_HOST`):
+   ```bash
+   docker exec jenkins curl -s -o /dev/null -w "%{http_code}" http://nexus:8083/v2/
+   # 401 - the Docker Registry API's standard "no credentials" response,
+   # which confirms network + registry reachability. A connection failure/
+   # timeout would mean it's still broken.
+   ```
+
+Steps 1-3 done and verified — Jenkins image rebuilt with the Java 11 JDK, `nexus-credentials` created, and `jenkins-docker` reachable at `nexus:8083`.
+
+#### Step 4 — Create the Jenkins job for *this* repo
+
+This Jenkins instance (`docker-compose -f jenkins-compose.yaml`) previously only had a job configured for the older `buy-02` repository — nothing was pointed at this repo (`SManousis/nexus` on GitHub) at all, so none of the `Jenkinsfile` changes above had ever actually run anywhere. A new job is required.
+
+Given this repo's workflow is already PR/branch-based (branch protection, required review, required `build-and-analyze` check), a **Multibranch Pipeline** fits better than a single job pinned to `master` — it auto-discovers every branch with a `Jenkinsfile` and builds it independently, so a feature branch gets real Jenkins signal before merge, not just after.
+
+Because of that, `Publish to Nexus` and `Build & Push Docker Images` were changed to `when { branch 'master' }` (see the `Jenkinsfile` diff) — without that guard, every feature-branch build would publish real jars/push real Docker images on every push, which isn't what you want for throwaway branches.
+
+Setup:
+
+1. `http://localhost:8090` → **New Item** → name it (e.g. `nexus`) → select **Multibranch Pipeline** → **OK**.
+2. **Branch Sources → Add source → Git**:
+   - Repository URL: `https://github.com/SManousis/nexus.git`
+   - Credentials: none — it's a public repo, anonymous HTTPS clone works.
+3. **Build Configuration**: Mode `by Jenkinsfile`, Script Path `Jenkinsfile` (default — matches the repo root).
+4. **Scan Multibranch Pipeline Triggers**: check "Periodically if not otherwise run", interval e.g. every 2 minutes (the `Jenkinsfile`'s own `pollSCM` trigger is a *single-job* trigger and doesn't drive multibranch's *branch discovery*; this setting is what makes it notice new/updated branches without a webhook).
+5. **Save.** Jenkins scans the repo, discovers `master` and any open feature branches with a `Jenkinsfile`, and creates a sub-job per branch automatically, building each once immediately.
+
+Existing global credentials (`buy01-jwt-secret`, `nexus-credentials`) are Jenkins-instance-wide, so every branch's sub-job already has access — nothing extra to configure per branch.
+
+Once this is set up, a real Jenkins run on `master` should get through `Publish to Nexus` and `Build & Push Docker Images` without manual intervention — that's the "Done when" bar in `plan.md`'s Phase 4. Feature-branch runs will build/test but stop before those two stages, by design.
 
 ## 7. Security and access control (Phase 5, bonus)
 

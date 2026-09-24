@@ -13,15 +13,7 @@ class ProductCompatibilityTest {
 
     @Test
     void readsLegacyImageUrlsInCreateRequestsButWritesOnlyCanonicalImageIds() throws Exception {
-        CreateProductRequest request = objectMapper.readValue("""
-                {
-                  "name": "Name",
-                  "description": "Description",
-                  "price": 10.00,
-                  "stock": 1,
-                  "imageUrls": ["media-1", "media-2"]
-                }
-                """, CreateProductRequest.class);
+        CreateProductRequest request = objectMapper.readValue("{\n  \"name\": \"Name\",\n  \"description\": \"Description\",\n  \"price\": 10.00,\n  \"stock\": 1,\n  \"imageUrls\": [\"media-1\", \"media-2\"]\n}\n", CreateProductRequest.class);
 
         assertThat(request.imageIds()).containsExactly("media-1", "media-2");
         assertThat(request.price()).isEqualByComparingTo(new BigDecimal("10.00"));

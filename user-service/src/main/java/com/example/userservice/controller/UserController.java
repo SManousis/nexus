@@ -3,7 +3,7 @@ package com.example.userservice.controller;
 import com.example.userservice.dto.UpdateProfileRequest;
 import com.example.userservice.dto.UserProfileResponse;
 import com.example.userservice.service.UserService;
-import jakarta.validation.Valid;
+import javax.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
